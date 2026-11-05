@@ -13,6 +13,7 @@ Sentinel is a production-minded starting point for an AI quality engineer. It tu
 - Gemini model factory for user-owned API keys
 - Browserbase session adapter
 - Supabase server client and initial RLS schema
+- Supabase password sign-up/sign-in and Google OAuth callback
 - `skills/web-testing.skill.md` operating rules for the agent
 
 The external service adapters are intentionally credential-gated. The dashboard can be explored without credentials, while a real run should only be enabled after Supabase, Inngest, Browserbase, and Gemini are configured.
@@ -28,6 +29,14 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 Apply `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor before persisting real projects or runs. Never expose `SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
+
+Configure Supabase Authentication before using `/sign-up` or Google sign-in:
+
+1. Enable the Email provider and choose whether email confirmation is required.
+2. Enable Google under Authentication providers and add the Google client ID
+   and secret in Supabase, not in this repository.
+3. Add `http://localhost:3000/auth/callback` and the deployed equivalent to
+   Supabase Authentication URL Configuration.
 
 For the durable run foundation, apply `supabase/migrations/0002_run_execution_foundation.sql` after the initial migration. It adds request idempotency, attempt history, and an outbox table. The API still refuses to claim a run was accepted until authentication, persistence, and durable dispatch are connected.
 
