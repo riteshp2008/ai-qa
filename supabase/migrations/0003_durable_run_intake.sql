@@ -81,6 +81,7 @@ begin
       'run', to_jsonb(v_existing),
       'attempt', to_jsonb(v_attempt),
       'outbox_id', v_outbox.id,
+      'outbox_status', v_outbox.status,
       'created', false
     );
   end if;
@@ -114,6 +115,7 @@ begin
     'run', to_jsonb(v_run),
     'attempt', to_jsonb(v_attempt),
     'outbox_id', v_outbox.id,
+    'outbox_status', v_outbox.status,
     'created', true
   );
 end;

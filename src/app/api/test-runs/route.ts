@@ -93,21 +93,23 @@ export async function POST(request: Request) {
     },
   } as const;
 
-  try {
-    await inngest.send(event);
-    const serviceRole = createSupabaseServiceRoleClient();
-    const { error: outboxError } = await serviceRole
-      .from("outbox_events")
-      .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
-      .eq("id", intake.outbox_id)
-      .eq("status", "pending");
+  if (intake.outbox_status === "pending") {
+    try {
+      await inngest.send(event);
+      const serviceRole = createSupabaseServiceRoleClient();
+      const { error: outboxError } = await serviceRole
+        .from("outbox_events")
+        .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
+        .eq("id", intake.outbox_id)
+        .eq("status", "pending");
 
-    if (outboxError) {
-      throw new Error(`Unable to mark dispatch intent sent: ${outboxError.message}`);
+      if (outboxError) {
+        throw new Error(`Unable to mark dispatch intent sent: ${outboxError.message}`);
+      }
+    } catch (error) {
+      console.error("Test-run dispatch failed.", error);
+      return NextResponse.json({ message: "Run was persisted but dispatch is currently unavailable.", runId: run.id }, { status: 503 });
     }
-  } catch (error) {
-    console.error("Test-run dispatch failed.", error);
-    return NextResponse.json({ message: "Run was persisted but dispatch is currently unavailable.", runId: run.id }, { status: 503 });
   }
 
   return NextResponse.json({
