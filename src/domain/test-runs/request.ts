@@ -30,6 +30,25 @@ function isPrivateHostname(hostname: string) {
   );
 }
 
+export function isSafeTargetUrl(url: string): string | undefined {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:") {
+      return "Target URL must use HTTPS.";
+    }
+    if (isPrivateHostname(parsedUrl.hostname)) {
+      return "Private, local, and metadata hosts are not allowed.";
+    }
+    if (parsedUrl.username || parsedUrl.password) {
+      return "Target URLs cannot contain credentials.";
+    }
+  } catch {
+    return "Target URL must be a valid HTTPS URL.";
+  }
+
+  return undefined;
+}
+
 export function validateTestRunRequest(input: unknown): {
   value?: TestRunRequest;
   errors: TestRunRequestError[];
@@ -45,17 +64,9 @@ export function validateTestRunRequest(input: unknown): {
   const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : crypto.randomUUID();
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() : undefined;
 
-  try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.protocol !== "https:") {
-      errors.push({ field: "url", message: "Target URL must use HTTPS." });
-    } else if (isPrivateHostname(parsedUrl.hostname)) {
-      errors.push({ field: "url", message: "Private, local, and metadata hosts are not allowed." });
-    } else if (parsedUrl.username || parsedUrl.password) {
-      errors.push({ field: "url", message: "Target URLs cannot contain credentials." });
-    }
-  } catch {
-    errors.push({ field: "url", message: "Target URL must be a valid HTTPS URL." });
+  const urlError = isSafeTargetUrl(url);
+  if (urlError) {
+    errors.push({ field: "url", message: urlError });
   }
 
   if (instruction.length < 10 || instruction.length > 10_000) {
