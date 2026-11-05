@@ -30,6 +30,12 @@ Open [http://localhost:3000](http://localhost:3000) for the public product
 overview. Sign in or create an account to continue to the protected
 dashboard at `/dashboard`.
 
+For Vercel, add every variable from `.env.example` in Project Settings →
+Environment Variables for the environments you deploy. `.env.local` is
+local-only and is not uploaded to Vercel. At minimum, authentication requires
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`; server APIs
+also require `SUPABASE_SERVICE_ROLE_KEY`.
+
 Apply `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor before persisting real projects or runs. Never expose `SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
 
 Configure Supabase Authentication before using `/sign-up` or Google sign-in:
