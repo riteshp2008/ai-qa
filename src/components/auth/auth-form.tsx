@@ -30,6 +30,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       : await supabase.auth.signInWithPassword({ email, password });
 
     if (result.error) {
+      console.error("Password authentication failed.", result.error.message);
       setNotice(isSignUp ? "Sign-up failed. Check your details and try again." : "Sign-in failed. Check your email and password.");
       setIsSubmitting(false);
       return;
@@ -56,6 +57,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     });
 
     if (error) {
+      console.error("Google authentication could not start.", error.message);
       setNotice("Google authentication is unavailable. Check the Supabase provider configuration.");
       setIsSubmitting(false);
     }

@@ -40,6 +40,9 @@ Configure Supabase Authentication before using `/sign-up` or Google sign-in:
 3. Add `http://localhost:3000/auth/callback` and the deployed equivalent to
    Supabase Authentication URL Configuration.
 
+The Google provider must be enabled in Supabase before the Google button can
+start OAuth. Successful authentication redirects to `/dashboard`.
+
 For the durable run foundation, apply `supabase/migrations/0002_run_execution_foundation.sql` after the initial migration. It adds request idempotency, attempt history, and an outbox table. The API still refuses to claim a run was accepted until authentication, persistence, and durable dispatch are connected.
 
 Check service configuration with `GET /api/health`. A real run requires all variables in `.env.example`; an API key alone is not enough. The current UI intentionally returns `503` until those services are configured and `501` while the execution workflow is being connected, rather than reporting a fake queued run.
