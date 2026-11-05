@@ -119,3 +119,28 @@ export async function POST(request: Request) {
     created: intake.created,
   }, { status: intake.created ? 202 : 200 });
 }
+
+export async function GET() {
+  try {
+    const { supabase, user } = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+    }
+
+    const { data, error } = await supabase
+      .from("test_runs")
+      .select("id, project_id, status, instruction, target_url, current_attempt, created_at, updated_at, started_at, completed_at, projects(name)")
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(25);
+
+    if (error) {
+      throw new Error(`Unable to load test runs: ${error.message}`);
+    }
+
+    return NextResponse.json({ runs: data });
+  } catch (error) {
+    console.error("Test-run listing failed.", error);
+    return NextResponse.json({ message: "Unable to load test runs." }, { status: 500 });
+  }
+}

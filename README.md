@@ -61,6 +61,11 @@ returns a queued run only after the run is durably stored and Inngest accepts
 the event. Duplicate requests with the same idempotency key return the
 original run.
 
+Apply `supabase/migrations/0004_execution_review_transition.sql` after the
+intake migration to enable the registered Inngest consumer. Until browser
+execution is implemented, accepted events transition to `needs_review` with
+an explicit `execution_not_available` reason. This is not a test pass.
+
 Check service configuration with `GET /api/health`. Durable intake requires
 the Supabase and Inngest variables; browser execution additionally requires
 Browserbase and Gemini. Until the execution workflow is implemented, queued

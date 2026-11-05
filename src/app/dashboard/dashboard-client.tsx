@@ -22,9 +22,26 @@ type ProjectResponse = {
   message?: string;
 };
 
+type TestRun = {
+  id: string;
+  project_id: string;
+  status: "queued" | "running" | "retry_wait" | "passed" | "failed" | "needs_review" | "cancelled";
+  instruction: string;
+  target_url: string;
+  created_at: string;
+  completed_at: string | null;
+  projects?: { name?: string } | null;
+};
+
+type TestRunResponse = {
+  runs?: TestRun[];
+  message?: string;
+};
+
 export default function DashboardClient({ user }: { user: DashboardUser }) {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [runs, setRuns] = useState<TestRun[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [url, setUrl] = useState("");
   const [instruction, setInstruction] = useState("");
@@ -62,6 +79,34 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
     }
 
     void loadProjects();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRuns() {
+      try {
+        const response = await fetch("/api/test-runs", { cache: "no-store" });
+        const result = (await response.json()) as TestRunResponse;
+        if (!response.ok) {
+          throw new Error(result.message ?? "Unable to load test runs.");
+        }
+        if (active) {
+          setRuns(result.runs ?? []);
+        }
+      } catch (error) {
+        if (active) {
+          setNotice(error instanceof Error ? error.message : "Unable to load test runs.");
+        }
+      }
+    }
+
+    void loadRuns();
+    const interval = window.setInterval(() => void loadRuns(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   function selectProject(project: Project, availableProjects = projects) {
@@ -117,12 +162,17 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      const result = (await response.json()) as { message?: string; missing?: string[] };
+      const result = (await response.json()) as { message?: string; runId?: string };
       if (!response.ok) {
         throw new Error(result.message ?? "Unable to start the test run.");
       }
 
-      setNotice(result.message ?? "Test run accepted.");
+      setNotice(result.runId ? `Test run ${result.runId.slice(0, 8)} queued.` : result.message ?? "Test run accepted.");
+      const runsResponse = await fetch("/api/test-runs", { cache: "no-store" });
+      if (runsResponse.ok) {
+        const runsResult = (await runsResponse.json()) as TestRunResponse;
+        setRuns(runsResult.runs ?? []);
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to start the test run.");
     } finally {
@@ -144,6 +194,7 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
   }
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const latestRun = runs[0];
 
   return (
     <main className="app-shell">
@@ -184,7 +235,7 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
         <div className="page-content" id="overview">
           <div className="page-heading"><div><p className="eyebrow">PROJECT OVERVIEW</p><h1>AI quality control <span>✦</span></h1><p className="subheading">Welcome back, {user.name ?? user.email}. Manage authorized projects and evidence-based checks.</p></div><button className="primary-button" onClick={() => document.getElementById("run-form")?.scrollIntoView({ behavior: "smooth" })}>＋ New test run</button></div>
 
-          <div className="metric-grid"><Metric label="Projects" value={String(projects.length)} detail={isLoadingProjects ? "Loading workspace" : "Owned projects"} trend="neutral" icon="▣" /><Metric label="Tests passed" value="—" detail="No results yet" trend="neutral" icon="✓" /><Metric label="Avg. run time" value="—" detail="No runs yet" trend="neutral" icon="◷" /><Metric label="AI confidence" value="—" detail="No findings yet" trend="neutral" icon="✦" /></div>
+          <div className="metric-grid"><Metric label="Projects" value={String(projects.length)} detail={isLoadingProjects ? "Loading workspace" : "Owned projects"} trend="neutral" icon="▣" /><Metric label="Tests passed" value={String(runs.filter((run) => run.status === "passed").length)} detail={runs.length ? "Persisted results" : "No runs yet"} trend="neutral" icon="✓" /><Metric label="Runs" value={String(runs.length)} detail="Latest 25 runs" trend="neutral" icon="◷" /><Metric label="Needs review" value={String(runs.filter((run) => run.status === "needs_review").length)} detail="Human attention required" trend="neutral" icon="✦" /></div>
 
           <section className="panel projects-panel" id="projects">
             <div className="panel-heading"><div><h2>Your projects</h2><p>Each project defines the authorized target scope for its runs.</p></div><button className="text-button" onClick={() => document.getElementById("project-form")?.scrollIntoView({ behavior: "smooth" })}>＋ Add project</button></div>
@@ -192,7 +243,7 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
           </section>
 
           <div className="dashboard-grid" id="runs">
-            <section className="panel test-panel"><div className="panel-heading"><div><h2>Latest test run</h2><p>Persisted run results will appear here.</p></div></div><EmptyState message="No test runs have been created." /></section>
+            <section className="panel test-panel"><div className="panel-heading"><div><h2>Latest test run</h2><p>Live state from the durable run store.</p></div></div>{latestRun ? <div className="run-summary"><strong>{latestRun.projects?.name ?? "Project run"}</strong><span className={`status status-${latestRun.status}`}>{latestRun.status.replace("_", " ")}</span><p>{latestRun.instruction}</p><small>{latestRun.target_url}</small></div> : <EmptyState message="No test runs have been created." />}</section>
             <section className="panel activity-panel" id="issues"><div className="panel-heading"><div><h2>Recent findings</h2><p>Evidence-backed findings will appear after a run.</p></div></div><EmptyState message="No findings yet." /></section>
           </div>
 
