@@ -1,10 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getServerEnv } from "@/lib/config";
+import { getServerEnv, hasSupabaseAuthConfig } from "@/lib/config";
 
 export async function updateSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  if (!hasSupabaseAuthConfig()) {
+    return response;
+  }
+
   const supabase = createServerClient(
     getServerEnv("NEXT_PUBLIC_SUPABASE_URL"),
     getServerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),

@@ -7,11 +7,15 @@ export function getServerEnv(name: string): string {
 }
 
 const requiredServices = {
-  supabase: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+  supabase: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
   inngest: ["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"],
   browserbase: ["BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID"],
   gemini: ["GEMINI_API_KEY"],
 } as const;
+
+export function hasSupabaseAuthConfig() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
 
 export function getServiceConfig() {
   return Object.fromEntries(
