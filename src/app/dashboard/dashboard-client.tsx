@@ -1,17 +1,69 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type DashboardUser = {
   email: string;
   name?: string;
 };
 
+type Project = {
+  id: string;
+  name: string;
+  target_url: string;
+};
+
 export default function DashboardClient({ user }: { user: DashboardUser }) {
   const [url, setUrl] = useState("");
   const [instruction, setInstruction] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    async function loadProjects() {
+      const response = await fetch("/api/projects");
+      if (!response.ok) {
+        setNotice("Unable to load your projects. Check your workspace configuration.");
+        return;
+      }
+
+      const result = (await response.json()) as { projects?: Project[] };
+      const loadedProjects = result.projects ?? [];
+      setProjects(loadedProjects);
+      if (loadedProjects[0]) {
+        setSelectedProjectId(loadedProjects[0].id);
+        setUrl(loadedProjects[0].target_url);
+      }
+    }
+
+    void loadProjects();
+  }, []);
+
+  async function ensureProject() {
+    if (selectedProjectId) {
+      return selectedProjectId;
+    }
+
+    const parsedUrl = new URL(url);
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `${parsedUrl.hostname} checks`,
+        targetUrl: url,
+      }),
+    });
+    const result = (await response.json()) as { project?: Project; message?: string };
+    if (!response.ok || !result.project) {
+      throw new Error(result.message ?? "Unable to create a project for this target.");
+    }
+
+    setProjects((current) => [result.project as Project, ...current]);
+    setSelectedProjectId(result.project.id);
+    return result.project.id;
+  }
 
   async function startRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -19,10 +71,11 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
     setNotice("");
 
     try {
+      const projectId = await ensureProject();
       const response = await fetch("/api/test-runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, instruction }),
+        body: JSON.stringify({ projectId, url, instruction }),
       });
       const result = (await response.json()) as { message?: string };
 
@@ -111,6 +164,16 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
           <section className="run-section" id="run-form">
             <div className="section-heading"><div><p className="eyebrow">RUN A NEW CHECK</p><h2>Tell your AI tester what to explore</h2></div><span className="secure-label">⌁ Your key stays private</span></div>
             <form className="run-form" onSubmit={startRun}>
+              <label>Project
+                <select value={selectedProjectId} onChange={(event) => {
+                  const project = projects.find((item) => item.id === event.target.value);
+                  setSelectedProjectId(event.target.value);
+                  if (project) setUrl(project.target_url);
+                }}>
+                  <option value="">Create project from target URL</option>
+                  {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                </select>
+              </label>
               <label>Target URL<input type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://your-app.com" /></label>
               <label>Testing instruction<textarea required value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={3} /></label>
               <div className="form-footer"><span>Gemini 2.5 Flash · Browserbase cloud browser</span><button className="primary-button" disabled={isStarting}>{isStarting ? "Queueing…" : "Start AI test  →"}</button></div>
