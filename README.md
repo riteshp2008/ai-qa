@@ -36,7 +36,11 @@ local-only and is not uploaded to Vercel. At minimum, authentication requires
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`; server APIs
 also require `SUPABASE_SERVICE_ROLE_KEY`.
 
-Apply `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor before persisting real projects or runs. Never expose `SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
+Apply `supabase/migrations/0001_initial_schema.sql`, then
+`supabase/migrations/0002_run_execution_foundation.sql`, and finally
+`supabase/migrations/0003_durable_run_intake.sql` in the Supabase SQL editor
+before persisting real projects or runs. Never expose
+`SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
 
 Configure Supabase Authentication before using `/sign-up` or Google sign-in:
 
@@ -49,9 +53,18 @@ Configure Supabase Authentication before using `/sign-up` or Google sign-in:
 The Google provider must be enabled in Supabase before the Google button can
 start OAuth. Successful authentication redirects to `/dashboard`.
 
-For the durable run foundation, apply `supabase/migrations/0002_run_execution_foundation.sql` after the initial migration. It adds request idempotency, attempt history, and an outbox table. The API still refuses to claim a run was accepted until authentication, persistence, and durable dispatch are connected.
+The durable run intake requires `INNGEST_EVENT_KEY` and
+`INNGEST_SIGNING_KEY` in addition to the Supabase variables. Migration 0003
+adds the transactional `create_test_run` RPC, canonical status constraint,
+initial attempt creation, and an outbox event. `POST /api/test-runs` now
+returns a queued run only after the run is durably stored and Inngest accepts
+the event. Duplicate requests with the same idempotency key return the
+original run.
 
-Check service configuration with `GET /api/health`. A real run requires all variables in `.env.example`; an API key alone is not enough. The current UI intentionally returns `503` until those services are configured and `501` while the execution workflow is being connected, rather than reporting a fake queued run.
+Check service configuration with `GET /api/health`. Durable intake requires
+the Supabase and Inngest variables; browser execution additionally requires
+Browserbase and Gemini. Until the execution workflow is implemented, queued
+runs remain explicit queued records rather than being reported as passed.
 
 ## Verification
 

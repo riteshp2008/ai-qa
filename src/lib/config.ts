@@ -35,3 +35,12 @@ export function getMissingServiceVariables() {
 export function hasExternalServicesConfigured() {
   return getMissingServiceVariables().length === 0;
 }
+
+export function getMissingRunIntakeVariables() {
+  return ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"]
+    .filter((variable) => !process.env[variable]);
+}
+
+export function hasRunIntakeConfigured() {
+  return getMissingRunIntakeVariables().length === 0;
+}
