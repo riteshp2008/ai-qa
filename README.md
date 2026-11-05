@@ -26,7 +26,9 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) for the public product
+overview. Sign in or create an account to continue to the protected
+dashboard at `/dashboard`.
 
 Apply `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor before persisting real projects or runs. Never expose `SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
 
