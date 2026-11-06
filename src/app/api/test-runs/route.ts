@@ -31,7 +31,6 @@ export async function POST(request: Request) {
     .from("projects")
     .select("id, target_url")
     .eq("id", validation.value.projectId)
-    .eq("owner_id", user.id)
     .maybeSingle();
 
   if (projectError) {
@@ -130,7 +129,6 @@ export async function GET() {
     const { data, error } = await supabase
       .from("test_runs")
       .select("id, project_id, status, instruction, target_url, current_attempt, created_at, updated_at, started_at, completed_at, projects(name)")
-      .eq("owner_id", user.id)
       .order("created_at", { ascending: false })
       .limit(25);
 

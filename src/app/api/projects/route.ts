@@ -12,8 +12,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("projects")
-      .select("id, name, target_url, created_at")
-      .eq("owner_id", user.id)
+      .select("id, name, target_url, created_at, team_id")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -39,14 +38,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 
+    const { data: membership, error: membershipError } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (membershipError || !membership) {
+      throw new Error(membershipError?.message ?? "No workspace team exists.");
+    }
+
     const { data, error } = await supabase
       .from("projects")
       .insert({
         owner_id: user.id,
+        team_id: membership.team_id,
         name: validation.value.name,
         target_url: validation.value.targetUrl,
       })
-      .select("id, name, target_url, created_at")
+      .select("id, name, target_url, created_at, team_id")
       .single();
 
     if (error) {

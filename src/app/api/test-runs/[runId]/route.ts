@@ -17,7 +17,6 @@ export async function GET(
       .from("test_runs")
       .select("id, project_id, status, instruction, target_url, current_attempt, created_at, updated_at, started_at, completed_at, test_run_attempts(id, attempt_number, status, error_class, retry_reason, created_at, started_at, completed_at)")
       .eq("id", runId)
-      .eq("owner_id", user.id)
       .maybeSingle();
 
     if (error) {
