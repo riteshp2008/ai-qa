@@ -42,6 +42,14 @@ Apply `supabase/migrations/0001_initial_schema.sql`, then
 before persisting real projects or runs. Never expose
 `SUPABASE_SERVICE_ROLE_KEY` or a user's Gemini key to client-side code.
 
+Apply `supabase/migrations/0004_execution_review_transition.sql` and
+`supabase/migrations/0005_team_hierarchy_and_invites.sql` after the intake
+migration. Migration 0005 creates the workspace team, team membership,
+project hierarchy, role checks, and durable collaborator invitations. Team
+owners and admins can create seven-day invite links from the Team screen.
+The invited user must sign in with the invited email before accepting the
+link.
+
 Configure Supabase Authentication before using `/sign-up` or Google sign-in:
 
 1. Enable the Email provider and choose whether email confirmation is required.
@@ -61,8 +69,7 @@ returns a queued run only after the run is durably stored and Inngest accepts
 the event. Duplicate requests with the same idempotency key return the
 original run.
 
-Apply `supabase/migrations/0004_execution_review_transition.sql` after the
-intake migration to enable the registered Inngest consumer. Until browser
+Migration 0004 enables the registered Inngest consumer. Until browser
 execution is implemented, accepted events transition to `needs_review` with
 an explicit `execution_not_available` reason. This is not a test pass.
 
