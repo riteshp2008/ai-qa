@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:check": "drizzle-kit check --config drizzle.config.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts"
   },
   "dependencies": {
     "@langchain/google-genai": "^2.3.4",
@@ -14,8 +16,10 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "browserbase": "^3.2.0",
+    "drizzle-orm": "^0.44.7",
     "inngest": "^4.26.2",
     "next": "16.4.5",
+    "postgres": "^3.4.7",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -26,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "drizzle-kit": "^0.31.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

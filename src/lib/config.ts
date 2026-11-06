@@ -8,6 +8,7 @@ export function getServerEnv(name: string): string {
 
 const requiredServices = {
   supabase: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+  database: ["DATABASE_URL"],
   inngest: ["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"],
   browserbase: ["BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID"],
   gemini: ["GEMINI_API_KEY"],

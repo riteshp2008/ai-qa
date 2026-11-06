@@ -35,6 +35,9 @@ Environment Variables for the environments you deploy. `.env.local` is
 local-only and is not uploaded to Vercel. At minimum, authentication requires
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`; server APIs
 also require `SUPABASE_SERVICE_ROLE_KEY`.
+For the typed ORM and vector index, also configure a server-only
+`DATABASE_URL` using the Supabase Postgres connection string. Never expose
+this value to the browser or commit it.
 
 Apply `supabase/migrations/0001_initial_schema.sql`, then
 `supabase/migrations/0002_run_execution_foundation.sql`, and finally
@@ -49,6 +52,15 @@ project hierarchy, role checks, and durable collaborator invitations. Team
 owners and admins can create seven-day invite links from the Team screen.
 The invited user must sign in with the invited email before accepting the
 link.
+
+Migration 0006 enables the Supabase `vector` extension and creates the
+team-scoped `repository_documents` table. It stores repository snapshots and
+1536-dimensional embeddings with a filtered HNSW cosine index. The Drizzle
+schema is in `src/lib/db/schema.ts`; its connection pool is capped at five
+connections and pagination helpers cap API pages at 100 records. Raw
+repository content remains protected by team RLS. Direct Drizzle queries must
+perform equivalent team authorization because a Postgres connection does not
+automatically inherit the browser Supabase session.
 
 Configure Supabase Authentication before using `/sign-up` or Google sign-in:
 
@@ -77,6 +89,8 @@ Check service configuration with `GET /api/health`. Durable intake requires
 the Supabase and Inngest variables; browser execution additionally requires
 Browserbase and Gemini. Until the execution workflow is implemented, queued
 runs remain explicit queued records rather than being reported as passed.
+
+Run `npm run db:check` or `npm run db:generate` after setting `DATABASE_URL`.
 
 ## Verification
 
