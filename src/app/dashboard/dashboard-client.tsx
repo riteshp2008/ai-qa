@@ -40,6 +40,7 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -174,11 +175,11 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${isDrawerOpen ? "drawer-open" : ""}`}>
         <div className="brand"><div className="brand-mark">✦</div><div><strong>Sentinel</strong><span>AI quality control</span></div></div>
         <div className="workspace-switcher"><small>WORKSPACE</small><strong>{team?.name ?? "Loading workspace"}</strong><span>{members.length} collaborator{members.length === 1 ? "" : "s"}</span></div>
         <nav className="nav-list" aria-label="Workspace navigation">
-          {nav.map(([key, icon, label]) => <button className={`nav-item ${view === key ? "active" : ""}`} key={key} type="button" onClick={() => setView(key)}><span>{icon}</span>{label}{key === "projects" && <b>{projects.length}</b>}{key === "runs" && <b>{runs.length}</b>}</button>)}
+          {nav.map(([key, icon, label]) => <button className={`nav-item ${view === key ? "active" : ""}`} key={key} type="button" onClick={() => { setView(key); setIsDrawerOpen(false); }}><span>{icon}</span>{label}{key === "projects" && <b>{projects.length}</b>}{key === "runs" && <b>{runs.length}</b>}</button>)}
         </nav>
         <div className="sidebar-bottom">
           <div className="usage-card"><div className="usage-header"><span>Workspace status</span><strong>Ready</strong></div><div className="usage-track"><div className="usage-value" /></div><small>Durable data is enabled</small></div>
@@ -186,8 +187,9 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
         </div>
       </aside>
 
+      {isDrawerOpen && <button className="drawer-backdrop" type="button" aria-label="Close navigation" onClick={() => setIsDrawerOpen(false)} />}
       <section className="content">
-        <header className="topbar"><div className="breadcrumbs"><span>{team?.name ?? "Workspace"}</span><b>/</b><strong>{nav.find(([key]) => key === view)?.[2]}</strong></div><div className="top-actions"><span className="environment"><i /> Production</span><span className="user-pill">{user.email}</span></div></header>
+        <header className="topbar"><button className="mobile-menu-button" type="button" aria-label="Open navigation" aria-expanded={isDrawerOpen} onClick={() => setIsDrawerOpen(true)}><span /><span /><span /></button><div className="breadcrumbs"><span>{team?.name ?? "Workspace"}</span><b>/</b><strong>{nav.find(([key]) => key === view)?.[2] ?? "Workspace"}</strong></div><div className="top-actions"><span className="environment"><i /> Production</span><span className="user-pill">{user.email}</span></div></header>
         <div className="page-content">
           {view === "overview" && <Overview projects={projects} runs={runs} latestRun={latestRun} onNavigate={setView} />}
           {view === "projects" && <section><PageHeading eyebrow="PROJECTS" title="Authorized applications" description="Projects are the team-owned boundary for targets, runs, and evidence." action={<button className="primary-button" type="button" onClick={() => setView("new-project")}>＋ New project</button>} /><div className="project-list">{projects.length ? projects.map((project) => <div className="project-row" key={project.id}><span className="project-icon">◇</span><span className="project-copy"><strong>{project.name}</strong><small>{project.target_url}</small></span><span className="project-check">Team project</span></div>) : <EmptyState message="No projects yet. Create the first authorized project." />}</div></section>}
