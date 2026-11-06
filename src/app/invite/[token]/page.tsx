@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const router = useRouter();
   const [token, setToken] = useState<string>();
   const [notice, setNotice] = useState("");
   const [isAccepting, setIsAccepting] = useState(false);
@@ -26,7 +28,8 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       const response = await fetch(`/api/team/invites/${token}/accept`, { method: "POST" });
       const result = (await response.json()) as { message?: string };
       if (!response.ok) throw new Error(result.message ?? "Unable to accept invite.");
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to accept invite.");
     } finally {
