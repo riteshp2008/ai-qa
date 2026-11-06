@@ -31,6 +31,25 @@ export const projects = pgTable("projects", {
   teamIndex: index("projects_team_id_idx").on(table.teamId),
 }));
 
+export const teamMembers = pgTable("team_members", {
+  teamId: uuid("team_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  role: text("role").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+}, (table) => ({
+  teamIndex: index("team_members_team_id_idx").on(table.teamId),
+}));
+
+export const teamInvites = pgTable("team_invites", {
+  id: uuid("id").primaryKey(),
+  teamId: uuid("team_id").notNull(),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  status: text("status").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
 export const testRuns = pgTable("test_runs", {
   id: uuid("id").primaryKey(),
   projectId: uuid("project_id").notNull(),

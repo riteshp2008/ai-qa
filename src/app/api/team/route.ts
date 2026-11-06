@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/supabase/server";
+import { getTeamSnapshot } from "@/lib/db/queries";
 
 export async function GET() {
   try {
@@ -20,24 +21,8 @@ export async function GET() {
       throw new Error(membershipError?.message ?? "No workspace membership exists.");
     }
 
-    const { data: members, error: membersError } = await supabase
-      .from("team_members")
-      .select("user_id, role, created_at")
-      .eq("team_id", membership.team_id)
-      .order("created_at", { ascending: true });
-
-    const { data: invites, error: invitesError } = await supabase
-      .from("team_invites")
-      .select("id, email, role, status, expires_at, created_at")
-      .eq("team_id", membership.team_id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-
-    if (membersError || invitesError) {
-      throw new Error(membersError?.message ?? invitesError?.message ?? "Unable to load team data.");
-    }
-
-    return NextResponse.json({ team: membership.teams, role: membership.role, members, invites });
+    const snapshot = await getTeamSnapshot(membership.team_id, 25);
+    return NextResponse.json({ team: snapshot.team ?? membership.teams, role: membership.role, members: snapshot.members, invites: snapshot.invites });
   } catch (error) {
     console.error("Team lookup failed.", error);
     return NextResponse.json({ message: "Unable to load workspace team." }, { status: 500 });
