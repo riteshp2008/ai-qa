@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 
 import { AppShell, AppShellSkeleton } from "@/components/shell/app-shell";
 import { requireOrganizationPage } from "@/server/auth/organization-context";
@@ -14,6 +15,7 @@ export default function OrganizationLayout({ children, params }: LayoutProps<"/o
 }
 
 async function OrganizationShell({ params, children }: { params: Promise<{ orgSlug: string }>; children: React.ReactNode }) {
+  await connection();
   const { orgSlug } = await params;
   const context = await requireOrganizationPage(orgSlug);
   const [memberships, pendingRequests] = await Promise.all([
