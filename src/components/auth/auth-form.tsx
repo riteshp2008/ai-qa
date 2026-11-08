@@ -1,95 +1,113 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { FormAlert } from "@/components/ui/form-alert";
+import { GoogleIcon } from "@/components/ui/icons";
+import { Spinner } from "@/components/ui/spinner";
+import type { ActionState } from "@/lib/forms/action-state";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "sign-in" | "sign-up";
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
+const copy = {
+  "sign-in": { title: "Welcome back", subtitle: "Sign in to continue to your organization.", submit: "Sign in", pending: "Signing in…" },
+  "sign-up": { title: "Create your account", subtitle: "Start free. You'll set up or join an organization next.", submit: "Create account", pending: "Creating account…" },
+} as const;
+
+/** Supabase auth must run in the browser so the session cookie is set client-side. */
+export function AuthForm({ mode, next, initialError }: { mode: AuthMode; next: string; initialError?: string }) {
   const router = useRouter();
   const isSignUp = mode === "sign-up";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [notice, setNotice] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const text = copy[mode];
+  const [state, setState] = useState<ActionState>(initialError ? { status: "error", message: initialError } : { status: "idle" });
+  const [pending, setPending] = useState<"password" | "google" | null>(null);
 
-  async function submitPasswordAuth(event: FormEvent<HTMLFormElement>) {
+  const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
-    setNotice("");
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    const fullName = String(form.get("fullName") ?? "").trim();
 
+    setPending("password");
+    setState({ status: "idle" });
     const supabase = createSupabaseBrowserClient();
     const result = isSignUp
-      ? await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-        })
+      ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl(), data: fullName ? { full_name: fullName } : undefined } })
       : await supabase.auth.signInWithPassword({ email, password });
 
     if (result.error) {
-      console.error("Password authentication failed.", result.error.message);
-      setNotice(isSignUp ? "Sign-up failed. Check your details and try again." : "Sign-in failed. Check your email and password.");
-      setIsSubmitting(false);
+      setPending(null);
+      setState({ status: "error", message: isSignUp ? result.error.message : "That email and password don't match an account." });
       return;
     }
-
     if (isSignUp && !result.data.session) {
-      setNotice("Account created. Check your email to confirm your account before signing in.");
-      setIsSubmitting(false);
+      setPending(null);
+      setState({ status: "success", message: `Check ${email} for a confirmation link to finish creating your account.` });
       return;
     }
-
-    router.push("/");
+    router.replace(next);
     router.refresh();
   }
 
   async function continueWithGoogle() {
-    setIsSubmitting(true);
-    setNotice("");
-
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-
+    setPending("google");
+    setState({ status: "idle" });
+    const { error } = await createSupabaseBrowserClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callbackUrl() } });
     if (error) {
-      console.error("Google authentication could not start.", error.message);
-      setNotice("Google authentication is unavailable. Check the Supabase provider configuration.");
-      setIsSubmitting(false);
+      setPending(null);
+      setState({ status: "error", message: "Google sign-in is unavailable right now." });
     }
   }
 
+  const otherHref = `${isSignUp ? "/sign-in" : "/sign-up"}${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`;
+
   return (
-    <main className="auth-shell">
-      <form className="auth-card" onSubmit={submitPasswordAuth}>
-        <p className="eyebrow">SENTINEL</p>
-        <h1>{isSignUp ? "Create your workspace account" : "Sign in to your workspace"}</h1>
-        <p className="subheading">Authenticate before managing projects or starting test runs.</p>
-        <label>
-          Email
-          <input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-        </label>
-        <label>
-          Password
-          <input type="password" autoComplete={isSignUp ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} />
-        </label>
-        <button className="primary-button" disabled={isSubmitting}>
-          {isSubmitting ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create account" : "Sign in")}
-        </button>
-        <div className="auth-divider"><span>or</span></div>
-        <button className="outline-button auth-google-button" type="button" disabled={isSubmitting} onClick={continueWithGoogle}>
-          Continue with Google
-        </button>
-        {notice && <p className="form-notice" role="alert">{notice}</p>}
-        <p className="auth-switch">
-          {isSignUp ? "Already have an account?" : "New to Sentinel?"}{" "}
-          <a href={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create an account"}</a>
-        </p>
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">{text.title}</h1>
+      <p className="mt-1.5 text-sm text-muted">{text.subtitle}</p>
+
+      <Button variant="secondary" size="lg" className="mt-8 w-full" disabled={pending !== null} onClick={continueWithGoogle}>
+        {pending === "google" ? <Spinner /> : <GoogleIcon />}
+        Continue with Google
+      </Button>
+
+      <div className="my-6 flex items-center gap-3 text-xs text-subtle">
+        <span className="h-px flex-1 bg-line" />or continue with email<span className="h-px flex-1 bg-line" />
+      </div>
+
+      <form className="grid gap-4" onSubmit={submit}>
+        {isSignUp && (
+          <Field label="Full name" htmlFor="fullName" optional>
+            <Input id="fullName" name="fullName" autoComplete="name" placeholder="Ada Lovelace" maxLength={120} />
+          </Field>
+        )}
+        <Field label="Work email" htmlFor="email">
+          <Input id="email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" />
+        </Field>
+        <Field label="Password" htmlFor="password" hint={isSignUp ? "At least 8 characters." : undefined}>
+          <Input id="password" name="password" type="password" minLength={8} required autoComplete={isSignUp ? "new-password" : "current-password"} />
+        </Field>
+        <FormAlert state={state} />
+        <Button type="submit" size="lg" className="w-full" disabled={pending !== null}>
+          {pending === "password" && <Spinner />}
+          {pending === "password" ? text.pending : text.submit}
+        </Button>
       </form>
-    </main>
+
+      <p className="mt-6 text-center text-sm text-muted">
+        {isSignUp ? "Already have an account?" : "New to Sentinel?"}{" "}
+        <Link href={otherHref} className="font-medium text-brand-ink hover:underline">
+          {isSignUp ? "Sign in" : "Create an account"}
+        </Link>
+      </p>
+    </div>
   );
 }

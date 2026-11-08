@@ -1,5 +1,9 @@
-import { AuthForm } from "@/components/auth/auth-form";
+import type { Metadata } from "next";
 
-export default function SignUpPage() {
-  return <AuthForm mode="sign-up" />;
+import { AuthPage } from "@/components/auth/auth-page";
+
+export const metadata: Metadata = { title: "Create account" };
+
+export default function SignUpPage({ searchParams }: PageProps<"/sign-up">) {
+  return <AuthPage mode="sign-up" searchParams={searchParams} />;
 }
