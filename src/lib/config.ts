@@ -14,6 +14,25 @@ const requiredServices = {
   gemini: ["GEMINI_API_KEY"],
 } as const;
 
+/** Public base URL used in emails and absolute links. */
+export function getAppUrl() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
+export function getEmailConfig() {
+  return {
+    resendApiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM ?? "Sentinel <onboarding@resend.dev>",
+  };
+}
+
+export function getGitHubToken() {
+  return process.env.GITHUB_TOKEN || undefined;
+}
+
 export function hasSupabaseAuthConfig() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }

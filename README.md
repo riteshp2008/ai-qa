@@ -18,6 +18,38 @@ Sentinel is a production-minded starting point for an AI quality engineer. It tu
 
 The external service adapters are intentionally credential-gated. The dashboard can be explored without credentials, while a real run should only be enabled after Supabase, Inngest, Browserbase, and Gemini are configured.
 
+## Product flow
+
+1. **Sign in** — email/password or Google (`/sign-in`, `/sign-up`). `?next=` is preserved through sign-in and OAuth.
+2. **Organization** — `/onboarding`: create an organization (you become owner) or request to join one by its
+   organization ID. Owners and admins are emailed and approve/decline on `/o/<id>/members`; the requester is
+   emailed the decision. Admins can also invite by email (`/invite/<token>`).
+3. **Projects** — `/o/<id>/projects`: authorized target applications; runs are restricted to the project origin.
+4. **GitHub repositories** — linked per project after verifying them against the GitHub API.
+5. **Test runs** — started from a project page or `POST /api/test-runs`; active runs auto-refresh.
+
+`/dashboard` redirects to the last-used organization, or to onboarding if the user has none.
+
+## Architecture
+
+```
+src/
+  domain/          Pure rules: types, zod schemas, permission matrix, errors. No I/O.
+  lib/             Infrastructure clients: db (Drizzle), supabase, email transport, github, inngest.
+  server/
+    repositories/  Data access only — one per aggregate, no business rules.
+    services/      Use cases: validation + authorization + orchestration. Throw AppError.
+    auth/          Session user and organization context (membership + role).
+    notifications/ Email templates and the notifier (delivered after the response via `after()`).
+    actions/       Adapter turning service outcomes into form ActionState.
+    http/          Adapter turning service outcomes into JSON responses.
+  app/             Routes. Pages read via services; `actions.ts` files are thin server actions.
+  components/      ui/ primitives (design tokens in globals.css), shell/, and feature components.
+```
+
+Who-can-do-what lives in one place: `src/domain/organizations/roles.ts`.
+Database tables keep the `teams` name; the product calls them organizations.
+
 ## Run locally
 
 ```bash
@@ -91,6 +123,12 @@ Browserbase and Gemini. Until the execution workflow is implemented, queued
 runs remain explicit queued records rather than being reported as passed.
 
 Run `npm run db:check` or `npm run db:generate` after setting `DATABASE_URL`.
+
+`DATABASE_URL` is required for all organization pages. Apply
+`supabase/migrations/0007_organization_onboarding.sql` (profiles, join requests,
+project repositories). Set `RESEND_API_KEY`/`EMAIL_FROM` to deliver emails —
+without them, emails are printed to the server console. `GITHUB_TOKEN` is
+optional (higher rate limits, private repositories).
 
 ## Verification
 

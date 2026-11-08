@@ -1,144 +1,42 @@
 import { NextResponse } from "next/server";
 
-import { getMissingRunIntakeVariables, hasRunIntakeConfigured } from "@/lib/config";
-import {
-  hashTestRunRequest,
-  validateTestRunRequest,
-} from "@/domain/test-runs/request";
-import { isTargetWithinProjectScope } from "@/domain/projects/target-scope";
-import { getAuthenticatedUser } from "@/lib/supabase/server";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { inngest } from "@/lib/inngest/client";
-import { TEST_RUN_ACCEPTED_EVENT } from "@/domain/test-runs/events";
+import { AppError } from "@/domain/errors";
+import { requireOrganizationAccess } from "@/server/auth/organization-context";
+import { getSessionUser } from "@/server/auth/session";
+import { errorResponse } from "@/server/http/respond";
+import { testRunService } from "@/server/services/test-run.service";
 
+/** Starts a test run. Body: { projectId, url, instruction, idempotencyKey? } */
 export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => null);
-  const validation = validateTestRunRequest(body);
-  if (!validation.value) {
-    return NextResponse.json({ message: "Invalid test-run request.", errors: validation.errors }, { status: 400 });
+  try {
+    const user = await getSessionUser();
+    if (!user) throw new AppError("unauthenticated", "Authentication required.");
+
+    const body: unknown = await request.json().catch(() => null);
+    const { runId, created } = await testRunService.start(user, body);
+    return NextResponse.json(
+      { runId, status: "queued", statusUrl: `/api/test-runs/${runId}`, created },
+      { status: created ? 202 : 200 },
+    );
+  } catch (error) {
+    return errorResponse(error, "Unable to start the test run.");
   }
-
-  if (!validation.value.projectId) {
-    return NextResponse.json({ message: "A project is required to start a test run." }, { status: 400 });
-  }
-
-  const { supabase, user } = await getAuthenticatedUser();
-  if (!user) {
-    return NextResponse.json({ message: "Authentication required." }, { status: 401 });
-  }
-
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("id, target_url")
-    .eq("id", validation.value.projectId)
-    .maybeSingle();
-
-  if (projectError) {
-    console.error("Test-run authorization failed.", projectError);
-    return NextResponse.json({ message: "Unable to authorize the test run." }, { status: 500 });
-  }
-  if (!project) {
-    return NextResponse.json({ message: "Project not found." }, { status: 404 });
-  }
-
-  if (!isTargetWithinProjectScope(project.target_url, validation.value.url)) {
-    return NextResponse.json({ message: "Target URL is outside the project's authorized scope." }, { status: 403 });
-  }
-
-  if (!hasRunIntakeConfigured()) {
-    return NextResponse.json({
-      message: "Durable run intake is not configured yet.",
-      missing: getMissingRunIntakeVariables(),
-    }, { status: 503 });
-  }
-
-  const requestHash = hashTestRunRequest(validation.value);
-  const { data: intake, error: intakeError } = await supabase.rpc("create_test_run", {
-    p_project_id: project.id,
-    p_url: validation.value.url,
-    p_instruction: validation.value.instruction,
-    p_idempotency_key: validation.value.idempotencyKey,
-    p_request_hash: requestHash,
-    p_event_payload: {
-      runId: "pending",
-      ownerId: user.id,
-      projectId: project.id,
-      idempotencyKey: validation.value.idempotencyKey,
-    },
-  });
-
-  if (intakeError || !intake) {
-    console.error("Durable run creation failed.", intakeError);
-    if (intakeError?.message.includes("Idempotency key was already used")) {
-      return NextResponse.json({ message: intakeError.message }, { status: 409 });
-    }
-    return NextResponse.json({ message: "Unable to persist the test run." }, { status: 500 });
-  }
-
-  const run = intake.run as { id: string; current_attempt: number };
-  const attempt = intake.attempt as { id?: string };
-  if (!attempt?.id) {
-    return NextResponse.json({ message: "Persisted run is missing its execution attempt." }, { status: 500 });
-  }
-
-  const event = {
-    name: TEST_RUN_ACCEPTED_EVENT,
-    data: {
-      runId: run.id,
-      attemptId: attempt.id,
-      ownerId: user.id,
-      projectId: project.id,
-      idempotencyKey: validation.value.idempotencyKey,
-    },
-  } as const;
-
-  if (intake.outbox_status === "pending") {
-    try {
-      await inngest.send(event);
-      const serviceRole = createSupabaseServiceRoleClient();
-      const { error: outboxError } = await serviceRole
-        .from("outbox_events")
-        .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
-        .eq("id", intake.outbox_id)
-        .eq("status", "pending");
-
-      if (outboxError) {
-        throw new Error(`Unable to mark dispatch intent sent: ${outboxError.message}`);
-      }
-    } catch (error) {
-      console.error("Test-run dispatch failed.", error);
-      return NextResponse.json({ message: "Run was persisted but dispatch is currently unavailable.", runId: run.id }, { status: 503 });
-    }
-  }
-
-  return NextResponse.json({
-    runId: run.id,
-    status: "queued",
-    statusUrl: `/api/test-runs/${run.id}`,
-    created: intake.created,
-  }, { status: intake.created ? 202 : 200 });
 }
 
-export async function GET() {
+/** Lists recent runs for an organization: GET /api/test-runs?organization=<id>&projectId=<uuid> */
+export async function GET(request: Request) {
   try {
-    const { supabase, user } = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ message: "Authentication required." }, { status: 401 });
-    }
+    const params = new URL(request.url).searchParams;
+    const slug = params.get("organization");
+    if (!slug) throw new AppError("validation", "The organization query parameter is required.");
 
-    const { data, error } = await supabase
-      .from("test_runs")
-      .select("id, project_id, status, instruction, target_url, current_attempt, created_at, updated_at, started_at, completed_at, projects(name)")
-      .order("created_at", { ascending: false })
-      .limit(25);
-
-    if (error) {
-      throw new Error(`Unable to load test runs: ${error.message}`);
-    }
-
-    return NextResponse.json({ runs: data });
+    const context = await requireOrganizationAccess(slug);
+    const runs = await testRunService.listForOrganization(context, {
+      projectId: params.get("projectId") ?? undefined,
+      limit: Number(params.get("limit")) || 25,
+    });
+    return NextResponse.json({ runs });
   } catch (error) {
-    console.error("Test-run listing failed.", error);
-    return NextResponse.json({ message: "Unable to load test runs." }, { status: 500 });
+    return errorResponse(error, "Unable to load test runs.");
   }
 }
