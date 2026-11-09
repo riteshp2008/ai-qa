@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CreateProjectForm } from "@/components/projects/create-project-form";
-import { Card, CardBody } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ArrowLeftIcon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -17,7 +17,7 @@ export default async function NewProjectPage({ params }: PageProps<"/o/[orgSlug]
         title="New project"
         description="Register an application to test. Next, you'll link its GitHub repositories and start runs."
       />
-      <Card><CardBody className="p-6"><CreateProjectForm orgSlug={orgSlug} /></CardBody></Card>
+      <Card><Card.Body className="p-6"><CreateProjectForm orgSlug={orgSlug} /></Card.Body></Card>
     </div>
   );
 }

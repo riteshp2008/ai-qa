@@ -6,17 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=0",
+    "lint:fix": "eslint --fix",
+    "typecheck": "next typegen && tsc --noEmit",
+    "validate": "npm run lint && npm run typecheck",
     "db:check": "drizzle-kit check --config drizzle.config.ts",
-    "db:generate": "drizzle-kit generate --config drizzle.config.ts"
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@langchain/google-genai": "^2.3.4",
     "@langchain/langgraph": "^1.6.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "aos": "^2.3.4",
     "browserbase": "^3.2.0",
     "drizzle-orm": "^0.44.7",
+    "framer-motion": "^14.10.1",
     "inngest": "^4.26.2",
     "next": "16.4.5",
     "postgres": "^3.4.7",
@@ -26,13 +32,18 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@tailwindcss/turbopack": "^4",
+    "@types/aos": "^3.0.8",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

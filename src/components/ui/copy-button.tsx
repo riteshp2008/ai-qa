@@ -1,27 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback } from "react";
 
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { Button } from "./button";
 import { CheckIcon, CopyIcon } from "./icons";
 
 export function CopyButton({ value, label = "Copy", size = "sm" }: { value: string; label?: string; size?: "sm" | "md" }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  }
+  const { copied, copy } = useCopyToClipboard();
+  const onClick = useCallback(() => void copy(value), [copy, value]);
 
   return (
-    <Button variant="secondary" size={size} onClick={copy} aria-live="polite">
+    <Button variant="secondary" size={size} onClick={onClick}>
       {copied ? <CheckIcon className="text-brand" /> : <CopyIcon />}
-      {copied ? "Copied" : label}
+      <span aria-live="polite">{copied ? "Copied" : label}</span>
     </Button>
   );
 }

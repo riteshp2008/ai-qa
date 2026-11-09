@@ -1,7 +1,7 @@
 import { cancelJoinRequestAction } from "@/app/onboarding/actions";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { OrgAvatar } from "@/components/ui/avatar";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { JoinRequestStatus, OutgoingJoinRequest } from "@/domain/organizations/types";
@@ -18,7 +18,7 @@ export function JoinRequestList({ requests, now }: { requests: OutgoingJoinReque
   if (requests.length === 0) return null;
   return (
     <Card>
-      <CardHeader title="Your join requests" description="Admins are notified by email. You'll get an email when they respond." />
+      <Card.Header title="Your join requests" description="Admins are notified by email. You'll get an email when they respond." />
       <ul className="divide-y divide-line">
         {requests.map((request) => {
           const display = statusDisplay[request.status];

@@ -1,0 +1,2 @@
+sh scripts/check-staged-secrets.sh
+npx lint-staged

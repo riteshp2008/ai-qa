@@ -3,6 +3,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
+import { privatePageMetadata } from "@/lib/seo/site";
+
 import { CreateOrganizationForm } from "@/components/onboarding/create-organization-form";
 import { JoinOrganizationForm } from "@/components/onboarding/join-organization-form";
 import { JoinRequestList } from "@/components/onboarding/join-request-list";
@@ -16,7 +18,7 @@ import { requireUser } from "@/server/auth/session";
 import { joinRequestService } from "@/server/services/join-request.service";
 import { organizationService } from "@/server/services/organization.service";
 
-export const metadata: Metadata = { title: "Set up your organization" };
+export const metadata: Metadata = { ...privatePageMetadata, title: "Set up your organization" };
 
 export default function OnboardingPage() {
   return (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -27,9 +27,9 @@ export function AuthForm({ mode, next, initialError }: { mode: AuthMode; next: s
   const [state, setState] = useState<ActionState>(initialError ? { status: "error", message: initialError } : { status: "idle" });
   const [pending, setPending] = useState<"password" | "google" | null>(null);
 
-  const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const callbackUrl = useCallback(() => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`, [next]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  const submit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
@@ -55,9 +55,9 @@ export function AuthForm({ mode, next, initialError }: { mode: AuthMode; next: s
     }
     router.replace(next);
     router.refresh();
-  }
+  }, [callbackUrl, isSignUp, next, router]);
 
-  async function continueWithGoogle() {
+  const continueWithGoogle = useCallback(async () => {
     setPending("google");
     setState({ status: "idle" });
     const { error } = await createSupabaseBrowserClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callbackUrl() } });
@@ -65,9 +65,12 @@ export function AuthForm({ mode, next, initialError }: { mode: AuthMode; next: s
       setPending(null);
       setState({ status: "error", message: "Google sign-in is unavailable right now." });
     }
-  }
+  }, [callbackUrl]);
 
-  const otherHref = `${isSignUp ? "/sign-in" : "/sign-up"}${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const otherHref = useMemo(
+    () => `${isSignUp ? "/sign-in" : "/sign-up"}${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`,
+    [isSignUp, next],
+  );
 
   return (
     <div>
@@ -85,15 +88,19 @@ export function AuthForm({ mode, next, initialError }: { mode: AuthMode; next: s
 
       <form className="grid gap-4" onSubmit={submit}>
         {isSignUp && (
-          <Field label="Full name" htmlFor="fullName" optional>
-            <Input id="fullName" name="fullName" autoComplete="name" placeholder="Ada Lovelace" maxLength={120} />
+          <Field>
+            <Field.Label optional>Full name</Field.Label>
+            <Input name="fullName" autoComplete="name" placeholder="Ada Lovelace" maxLength={120} />
           </Field>
         )}
-        <Field label="Work email" htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" />
+        <Field>
+          <Field.Label>Work email</Field.Label>
+          <Input name="email" type="email" inputMode="email" autoComplete="email" required placeholder="you@company.com" />
         </Field>
-        <Field label="Password" htmlFor="password" hint={isSignUp ? "At least 8 characters." : undefined}>
-          <Input id="password" name="password" type="password" minLength={8} required autoComplete={isSignUp ? "new-password" : "current-password"} />
+        <Field>
+          <Field.Label>Password</Field.Label>
+          <Input name="password" type="password" minLength={8} required autoComplete={isSignUp ? "new-password" : "current-password"} />
+          {isSignUp && <Field.Hint>At least 8 characters.</Field.Hint>}
         </Field>
         <FormAlert state={state} />
         <Button type="submit" size="lg" className="w-full" disabled={pending !== null}>

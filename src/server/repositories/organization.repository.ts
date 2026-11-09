@@ -90,6 +90,11 @@ export const organizationRepository = {
     return rows.map((row) => ({ ...row, email: row.email ?? "Unknown member" }));
   },
 
+  async countMembers(organizationId: string): Promise<number> {
+    const [row] = await getDb().select({ value: count() }).from(teamMembers).where(eq(teamMembers.teamId, organizationId));
+    return row?.value ?? 0;
+  },
+
   async countOwners(organizationId: string): Promise<number> {
     const [row] = await getDb()
       .select({ value: count() })

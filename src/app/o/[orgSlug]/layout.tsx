@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 
 import { AppShell, AppShellSkeleton } from "@/components/shell/app-shell";
+import { privatePageMetadata } from "@/lib/seo/site";
 import { requireOrganizationPage } from "@/server/auth/organization-context";
 import { organizationService } from "@/server/services/organization.service";
 import { overviewService } from "@/server/services/overview.service";
+
+export const metadata: Metadata = privatePageMetadata;
 
 export default function OrganizationLayout({ children, params }: LayoutProps<"/o/[orgSlug]">) {
   return (

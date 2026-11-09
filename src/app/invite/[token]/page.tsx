@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
+import { privatePageMetadata } from "@/lib/seo/site";
+
 import { ActionButton } from "@/components/ui/action-button";
 import { OrgAvatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { getSessionUser } from "@/server/auth/session";
 import { inviteService } from "@/server/services/invite.service";
 import { acceptInviteAction } from "./actions";
 
-export const metadata: Metadata = { title: "Invitation" };
+export const metadata: Metadata = { ...privatePageMetadata, title: "Invitation" };
 
 export default function InvitePage({ params }: PageProps<"/invite/[token]">) {
   return (
