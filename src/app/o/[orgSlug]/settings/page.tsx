@@ -5,7 +5,7 @@ import { leaveOrganizationAction } from "@/app/o/[orgSlug]/settings/actions";
 import { RenameOrganizationForm } from "@/components/settings/rename-organization-form";
 import { ActionButton } from "@/components/ui/action-button";
 import { RoleBadge } from "@/components/ui/badge";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { can } from "@/domain/organizations/roles";
@@ -24,8 +24,8 @@ export default async function SettingsPage({ params }: PageProps<"/o/[orgSlug]/s
       <PageHeader title="Settings" description="Manage this organization and your membership." />
       <div className="grid gap-6">
         <Card>
-          <CardHeader title="General" />
-          <CardBody className="grid gap-6 p-5">
+          <Card.Header title="General" />
+          <Card.Body className="grid gap-6 p-5">
             {can(context.role, "organization:update") ? (
               <RenameOrganizationForm orgSlug={orgSlug} name={organization.name} />
             ) : (
@@ -39,19 +39,19 @@ export default async function SettingsPage({ params }: PageProps<"/o/[orgSlug]/s
               </div>
               <p className="text-[13px] text-muted">Share it with teammates so they can request to join. IDs are permanent.</p>
             </div>
-          </CardBody>
+          </Card.Body>
         </Card>
 
         <Card>
-          <CardHeader title="Your membership" />
-          <CardBody className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <Card.Header title="Your membership" />
+          <Card.Body className="flex flex-wrap items-center justify-between gap-3 p-5">
             <div className="flex items-center gap-2 text-sm">Signed in as <span className="font-medium">{context.user.email}</span> <RoleBadge role={context.role} /></div>
-          </CardBody>
+          </Card.Body>
         </Card>
 
         <Card className="border-danger/30">
-          <CardHeader title="Leave organization" description="You'll lose access to its projects and runs until you're invited again." />
-          <CardBody className="p-5">
+          <Card.Header title="Leave organization" description="You'll lose access to its projects and runs until you're invited again." />
+          <Card.Body className="p-5">
             <ActionButton
               action={leaveOrganizationAction.bind(null, orgSlug)}
               variant="danger"
@@ -61,7 +61,7 @@ export default async function SettingsPage({ params }: PageProps<"/o/[orgSlug]/s
             >
               Leave {organization.name}
             </ActionButton>
-          </CardBody>
+          </Card.Body>
         </Card>
       </div>
     </div>

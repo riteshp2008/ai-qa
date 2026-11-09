@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { unstable_rethrow } from "next/navigation";
 
 import { AppError } from "@/domain/errors";
@@ -24,13 +26,13 @@ export async function runAction(
   body: () => Promise<ActionState | void>,
 ): Promise<ActionState> {
   try {
-    return (await body()) ?? { status: "success" };
+    return { ...((await body()) ?? { status: "success" }), nonce: randomUUID() };
   } catch (error) {
     unstable_rethrow(error);
     if (error instanceof AppError) {
-      return { status: "error", message: error.message, fieldErrors: error.fieldErrors, values };
+      return { status: "error", message: error.message, fieldErrors: error.fieldErrors, values, nonce: randomUUID() };
     }
     console.error("Server action failed.", error);
-    return { status: "error", message: "Something went wrong on our side. Please try again.", values };
+    return { status: "error", message: "Something went wrong on our side. Please try again.", values, nonce: randomUUID() };
   }
 }

@@ -1,7 +1,7 @@
 import { reviewJoinRequestAction } from "@/app/o/[orgSlug]/members/actions";
 import { ActionButton } from "@/components/ui/action-button";
 import { Avatar } from "@/components/ui/avatar";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { CheckIcon } from "@/components/ui/icons";
 import type { PendingJoinRequest } from "@/domain/organizations/types";
 import { formatRelativeTime } from "@/lib/utils/format";
@@ -10,7 +10,7 @@ export function JoinRequestQueue({ requests, orgSlug, now }: { requests: Pending
   if (requests.length === 0) return null;
   return (
     <Card className="border-amber-500/30 ring-1 ring-amber-500/10">
-      <CardHeader
+      <Card.Header
         title={<span className="flex items-center gap-2">Join requests <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">{requests.length}</span></span>}
         description="People who asked to join with your organization ID. Approved requesters join as members."
       />

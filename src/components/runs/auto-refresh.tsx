@@ -1,17 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback } from "react";
 
-/** Re-fetches server data on an interval while there is something in flight. */
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
+
+/** Re-fetches server data while runs are in flight; pauses when the tab is hidden. */
 export function AutoRefresh({ active, intervalMs = 8000 }: { active: boolean; intervalMs?: number }) {
   const router = useRouter();
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") router.refresh();
-    }, intervalMs);
-    return () => window.clearInterval(id);
-  }, [active, intervalMs, router]);
+  const refresh = useCallback(() => router.refresh(), [router]);
+  useVisibleInterval(refresh, intervalMs, active);
   return null;
 }

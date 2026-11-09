@@ -50,6 +50,31 @@ src/
 Who-can-do-what lives in one place: `src/domain/organizations/roles.ts`.
 Database tables keep the `teams` name; the product calls them organizations.
 
+## Frontend conventions
+
+- **Compound components** for related UI pieces: `Card` / `Card.Header` / `Card.Body`, `Field` / `Field.Label` /
+  `Field.Hint` / `Field.Error`, `Menu`, `Drawer`, `Skeleton`, `Reveal`. Compounds used from server components are
+  assembled in a non-client module (server components can't dot into client modules).
+- **Side effects live in hooks** (`src/hooks/`): click-outside, Escape, focus trap, body scroll lock, clipboard,
+  visibility-aware intervals. Each cleans up after itself.
+- **Streaming**: pages render a static shell and wrap each data section in its own `Suspense` boundary.
+- **Motion**: framer-motion via `LazyMotion` (`m.*` only, features loaded on demand, honours reduced motion);
+  AOS is lazy-loaded on the marketing page only.
+- **Mobile**: top bar + bottom tab bar + swipe-to-close drawer (drawer body is code-split and preloaded on intent).
+- **SEO**: shared metadata in `src/lib/seo/site.ts`, `robots.ts`, `sitemap.ts`, `manifest.ts`, generated icons
+  and OG images, JSON-LD on the landing page, `noindex` on every private route. Set `NEXT_PUBLIC_APP_URL` at
+  build time so canonical/OG URLs are absolute and correct.
+
+## Git hooks (Husky)
+
+`npm install` installs the hooks automatically.
+
+| Hook | Runs |
+| --- | --- |
+| `pre-commit` | blocks staged `.env*` files / private keys, then `lint-staged` (ESLint `--fix` on staged files + project-wide type check) |
+| `commit-msg` | commitlint — [Conventional Commits](https://www.conventionalcommits.org), e.g. `feat(shell): add bottom tab bar` |
+| `pre-push` | `npm run validate` (lint + typecheck) and `npm run build` |
+
 ## Run locally
 
 ```bash
@@ -133,6 +158,6 @@ optional (higher rate limits, private repositories).
 ## Verification
 
 ```bash
-npm run lint
+npm run validate   # lint + typecheck
 npm run build
 ```
