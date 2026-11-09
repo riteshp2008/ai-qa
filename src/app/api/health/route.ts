@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getMissingServiceVariables, getServiceConfig } from "@/lib/config";
+import { getMissingPipelineVariables, getMissingServiceVariables, getServiceConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { sql } from "drizzle-orm";
 
@@ -10,6 +10,12 @@ const requiredTables = [
   "teams",
   "team_members",
   "test_runs",
+  "team_join_requests",
+  "project_repositories",
+  "agent_pipelines",
+  "agent_pipeline_events",
+  "agent_artifacts",
+  "agent_reviews",
 ] as const;
 
 async function checkDatabase() {
@@ -42,7 +48,8 @@ export async function GET() {
   const databaseReady = !missing.includes("DATABASE_URL") && database.ready && !databaseError;
   return NextResponse.json({
     status: missing.length === 0 && databaseReady ? "ready" : "configuration_required",
-    services: { ...getServiceConfig(), database: databaseReady },
+    services: { ...getServiceConfig(), database: databaseReady, agentPipeline: getMissingPipelineVariables().length === 0 },
+    agentPipeline: { missing: getMissingPipelineVariables() },
     missing: [...missing, ...database.missingTables.map((table) => `database table: ${table}`)],
     database: {
       connected: databaseReady,

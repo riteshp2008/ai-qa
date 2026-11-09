@@ -50,6 +50,31 @@ src/
 Who-can-do-what lives in one place: `src/domain/organizations/roles.ts`.
 Database tables keep the `teams` name; the product calls them organizations.
 
+## Agentic test pipeline
+
+After a project has a linked GitHub repository, **Run AI test pipeline** starts a multi-agent workflow:
+
+```
+provision sandbox → repo analyst → containerizer ⟲ (HITL: missing env)
+  → [e2e-tester ∥ api-tester ∥ unit-tester] → quality gate → reviewer ⟲ (revise, max 2 rounds)
+  → platform re-verifies every suite → guardrail diff filter → HITL approval
+  → approve: PR opened (draft if anything fails) · request changes: agents loop with feedback · reject: stop
+```
+
+| Concern | How |
+| --- | --- |
+| Orchestration | Inngest durable workflow (`src/server/workflows`), one retryable step per stage; human waits via `waitForEvent` |
+| Agents | Each agent is an explicit LangGraph loop (`runtime/agent-loop.ts`) with iteration + wall-clock budgets; supervisor graph fans test agents out in parallel and loops on reviewer feedback |
+| Sandbox | E2B microVM with Docker (`scripts/e2b/build-template.mjs`); pluggable via `SANDBOX_PROVIDER`. A Dockerfile is written if the repo has none |
+| Guardrails | Per-agent write allowlists (agents never edit app source), command policy, secret redaction, test-quality checks (no `.only/.skip`/tautologies), final diff filter, platform re-verification instead of trusting agent reports, untrusted-repo-content prompting |
+| HITL | Missing runtime config (values never stored), approval before any PR, request-changes loop (max 3 rounds), cancel anytime |
+| GitHub | GitHub App installation tokens: read-only in the sandbox, write only server-side; PR built via the Git Data API |
+
+Setup: apply `supabase/migrations/0008_agent_test_pipelines.sql`, set the pipeline variables in `.env.example`,
+build the sandbox template once with `npm run e2b:template`, and run Inngest (`npx inngest-cli dev` locally).
+Agent stages can take many minutes: on serverless hosts raise `maxDuration` or serve `/api/inngest` from a
+long-running worker.
+
 ## Frontend conventions
 
 - **Compound components** for related UI pieces: `Card` / `Card.Header` / `Card.Body`, `Field` / `Field.Label` /
@@ -73,7 +98,7 @@ Database tables keep the `teams` name; the product calls them organizations.
 | --- | --- |
 | `pre-commit` | blocks staged `.env*` files / private keys, then `lint-staged` (ESLint `--fix` on staged files + project-wide type check) |
 | `commit-msg` | commitlint — [Conventional Commits](https://www.conventionalcommits.org), e.g. `feat(shell): add bottom tab bar` |
-| `pre-push` | `npm run validate` (lint + typecheck) and `npm run build` |
+| `pre-push` | `npm run validate` (lint + typecheck + unit tests) and `npm run build` |
 
 ## Run locally
 

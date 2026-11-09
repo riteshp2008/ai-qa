@@ -14,7 +14,7 @@ export async function createOrganizationAction(_previous: ActionState, formData:
   return runAction(values, async () => {
     const user = await requireActionUser();
     const organization = await organizationService.create(user, values);
-    redirect(`/o/${organization.slug}?welcome=1`);
+    redirect(`/o/${organization.slug}/projects/new?welcome=1`);
   });
 }
 

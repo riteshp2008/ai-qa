@@ -64,3 +64,13 @@ export function getMissingRunIntakeVariables() {
 export function hasRunIntakeConfigured() {
   return getMissingRunIntakeVariables().length === 0;
 }
+
+/** Everything the agentic pipeline needs to run end to end. */
+export function getMissingPipelineVariables() {
+  const missing = ["E2B_API_KEY", "GEMINI_API_KEY", "INNGEST_EVENT_KEY", "DATABASE_URL"].filter((name) => !process.env[name]);
+  if (!process.env.GITHUB_TOKEN && !(process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY)) {
+    missing.push("GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (or GITHUB_TOKEN)");
+  }
+  // The Inngest dev server does not need an event key.
+  return process.env.INNGEST_DEV ? missing.filter((name) => name !== "INNGEST_EVENT_KEY") : missing;
+}

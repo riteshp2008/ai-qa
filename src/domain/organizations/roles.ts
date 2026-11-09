@@ -17,6 +17,10 @@ const permissionMatrix = {
   "repositories:link": ["owner", "admin", "member"],
   "repositories:unlink": ["owner", "admin"],
   "runs:create": ["owner", "admin", "member"],
+  "pipelines:run": ["owner", "admin", "member"],
+  /** Approving opens a pull request on the team's repository, so it's restricted. */
+  "pipelines:approve": ["owner", "admin"],
+  "pipelines:cancel": ["owner", "admin", "member"],
 } as const satisfies Record<string, readonly OrganizationRole[]>;
 
 export type Permission = keyof typeof permissionMatrix;

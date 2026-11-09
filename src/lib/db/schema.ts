@@ -1,5 +1,6 @@
 import {
   bigint,
+  bigserial,
   boolean,
   index,
   integer,
@@ -12,6 +13,16 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
+
+import type {
+  AppProfile,
+  ArtifactKind,
+  PipelineEventKind,
+  PipelineResults,
+  PipelineStatus,
+  ReviewDecision,
+  SuiteKind,
+} from "@/domain/pipelines/types";
 
 /**
  * Drizzle mirror of the Supabase migrations in `supabase/migrations`.
@@ -141,4 +152,67 @@ export const repositoryDocuments = pgTable("repository_documents", {
 }, (table) => [
   index("repository_documents_lookup_idx").on(table.teamId, table.repositoryFullName, table.revision),
   uniqueIndex("repository_documents_path_revision_key").on(table.repositoryFullName, table.revision, table.path),
+]);
+
+export const agentPipelines = pgTable("agent_pipelines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id").notNull(),
+  projectId: uuid("project_id").notNull(),
+  repositoryId: uuid("repository_id").notNull(),
+  createdBy: uuid("created_by").notNull(),
+  status: text("status").$type<PipelineStatus>().notNull().default("queued"),
+  suites: text("suites").array().$type<SuiteKind[]>().notNull(),
+  instructions: text("instructions"),
+  baseBranch: text("base_branch"),
+  sandboxId: text("sandbox_id"),
+  appProfile: jsonb("app_profile").$type<AppProfile>(),
+  results: jsonb("results").$type<PipelineResults>().notNull().default({}),
+  reviewRound: integer("review_round").notNull().default(0),
+  prUrl: text("pr_url"),
+  prNumber: integer("pr_number"),
+  prBranch: text("pr_branch"),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("agent_pipelines_project_created_idx").on(table.projectId, table.createdAt),
+  index("agent_pipelines_team_status_idx").on(table.teamId, table.status),
+]);
+
+export const agentPipelineEvents = pgTable("agent_pipeline_events", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  pipelineId: uuid("pipeline_id").notNull(),
+  agent: text("agent").notNull(),
+  kind: text("kind").$type<PipelineEventKind>().notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"),
+  createdAt: createdAt(),
+}, (table) => [
+  index("agent_pipeline_events_pipeline_idx").on(table.pipelineId, table.id),
+]);
+
+export const agentArtifacts = pgTable("agent_artifacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pipelineId: uuid("pipeline_id").notNull(),
+  path: text("path").notNull(),
+  kind: text("kind").$type<ArtifactKind>().notNull(),
+  agent: text("agent").notNull(),
+  content: text("content").notNull(),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("agent_artifacts_pipeline_id_path_key").on(table.pipelineId, table.path),
+]);
+
+export const agentReviews = pgTable("agent_reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pipelineId: uuid("pipeline_id").notNull(),
+  decision: text("decision").$type<ReviewDecision>().notNull(),
+  feedback: text("feedback"),
+  decidedBy: uuid("decided_by").notNull(),
+  createdAt: createdAt(),
+}, (table) => [
+  index("agent_reviews_pipeline_idx").on(table.pipelineId, table.createdAt),
 ]);
