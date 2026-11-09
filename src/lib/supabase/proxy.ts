@@ -50,6 +50,10 @@ export async function updateSupabaseSession(request: NextRequest) {
     return redirectTo(signIn);
   }
 
+  if (user && pathname === "/") {
+    return redirectTo(new URL("/dashboard", request.url));
+  }
+
   if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
     return redirectTo(new URL(safeRedirectPath(request.nextUrl.searchParams.get("next")), request.url));
   }
